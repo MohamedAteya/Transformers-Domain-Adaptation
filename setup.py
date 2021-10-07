@@ -43,12 +43,12 @@ setup(
         where="src", exclude=("etl*", "utils*", "experimental*", "tests")
     ),
     install_requires=[
-        "transformers>=4,<5",
-        "tokenizers>=0.9,<0.10",
-        "datasets>=1.2,<1.3",
+        "transformers",
+        "tokenizers",
+        "datasets",
         "pandas",
-        "torch>=1.7,<1.8",
-        "scipy==1.5.4",
+        "torch",
+        "scipy",
         "scikit-learn",
         "tqdm",
     ],
