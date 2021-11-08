@@ -34,7 +34,7 @@ class VocabAugmentor(BaseEstimator):
     )
 
     def __init__(
-        self, tokenizer: PreTrainedTokenizerFast, cased: bool, target_vocab_size: int, return_token_counts : bool = False
+        self, tokenizer: PreTrainedTokenizerFast, cased: bool, target_vocab_size: int 
     ):
         """
         Args:
@@ -53,7 +53,6 @@ class VocabAugmentor(BaseEstimator):
         self.tokenizer = tokenizer
         self.cased = cased
         self.target_vocab_size = target_vocab_size
-        self.return_token_counts = return_token_counts
         self.model_cls: Type[
             BaseTokenizer
         ] = tokenizer.backend_tokenizer.model.__class__
@@ -73,6 +72,36 @@ class VocabAugmentor(BaseEstimator):
             vocab_size=self.target_vocab_size,
             special_tokens=list(self.tokenizer.special_tokens_map.values()),
         )
+    
+    def get_new_token_counts(
+        self,
+        training_corpus: Union[Corpus, Path, str]
+    ) -> CounterType:
+        """Obtain the new tokens counts found in :obj:`training_corpus`.
+
+        The new token counts is a `Collections.Counter` that has the new tokens that do not exist in the :obj:`tokenizer`'s vocab and their conts.
+
+        Args:
+            training_corpus: The training corpus
+        """
+        with NamedTemporaryFile('w+') as tmpfile:
+            train_files = self._get_training_files(training_corpus, _tmpfile=tmpfile)
+            self.rust_tokenizer.train(train_files, self.trainer)
+
+            # Include unknown token to vocab
+            with TemporaryDirectory() as tmpdir:
+                files = self.rust_tokenizer.model.save(tmpdir)
+                self.rust_tokenizer.model = self.model_cls.from_file(*files, unk_token='[UNK]')
+            
+            # Find Token counts
+            token_counts = self._count_tokens(train_files)
+
+        # Remove overlapping tokens from original tokenizer
+        token_counts = self._remove_overlapping_tokens(token_counts)
+
+        return token_counts
+
+
 
     def get_new_tokens(
         self,
@@ -110,7 +139,7 @@ class VocabAugmentor(BaseEstimator):
             )
         ]
         
-        return new_tokens, token_counts if self.return_token_counts else new_tokens
+        return new_tokens
 
     @staticmethod
     def _get_training_files(
