@@ -34,7 +34,7 @@ class VocabAugmentor(BaseEstimator):
     )
 
     def __init__(
-        self, tokenizer: PreTrainedTokenizerFast, cased: bool, target_vocab_size: int
+        self, tokenizer: PreTrainedTokenizerFast, cased: bool, target_vocab_size: int, return_token_counts : bool = False
     ):
         """
         Args:
@@ -53,6 +53,7 @@ class VocabAugmentor(BaseEstimator):
         self.tokenizer = tokenizer
         self.cased = cased
         self.target_vocab_size = target_vocab_size
+        self.return_token_counts = return_token_counts
         self.model_cls: Type[
             BaseTokenizer
         ] = tokenizer.backend_tokenizer.model.__class__
@@ -108,7 +109,8 @@ class VocabAugmentor(BaseEstimator):
                 self.target_vocab_size - self.tokenizer.vocab_size
             )
         ]
-        return new_tokens
+        
+        return new_tokens, token_counts if self.return_token_counts else new_tokens
 
     @staticmethod
     def _get_training_files(
